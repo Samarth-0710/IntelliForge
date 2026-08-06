@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.models.incident import Incident
 from app.incidents.schemas import IncidentCreate
 from app.notifications.service import create_notification
-
+from fastapi import HTTPException
 
 def create_incident(db: Session, incident: IncidentCreate):
 
@@ -119,5 +119,23 @@ def assign_incident(
 
     db.commit()
     db.refresh(incident)
+
+    return incident
+
+def get_incident_by_id(
+    db: Session,
+    incident_id: int
+):
+    incident = (
+        db.query(Incident)
+        .filter(Incident.id == incident_id)
+        .first()
+    )
+
+    if incident is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Incident not found"
+        )
 
     return incident

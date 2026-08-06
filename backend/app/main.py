@@ -13,6 +13,7 @@ from app.analytics.router import router as analytics_router
 from app.assistant.router import router as assistant_router
 from app.notifications.router import router as notifications_router
 from app.reports.router import router as reports_router
+from app.ai.router import router as ai_router
 from app.core.exceptions import (
     IntelliForgeException,
     intelliforge_exception_handler,
@@ -50,6 +51,7 @@ app.include_router(analytics_router)
 app.include_router(assistant_router)
 app.include_router(notifications_router)
 app.include_router(reports_router)
+app.include_router(ai_router)
 
 @app.get("/")
 def root():

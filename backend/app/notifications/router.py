@@ -6,6 +6,11 @@ from app.notifications.service import (
     get_notifications,
     mark_as_read
 )
+from app.notifications.service import (
+    get_notifications,
+    mark_as_read,
+    delete_notification
+)
 
 router = APIRouter(
     prefix="/notifications",
@@ -24,3 +29,13 @@ def read_notification(
     db: Session = Depends(get_db)
 ):
     return mark_as_read(db, notification_id)
+
+@router.delete("/{notification_id}")
+def remove_notification(
+    notification_id: int,
+    db: Session = Depends(get_db)
+):
+    return delete_notification(
+        db,
+        notification_id
+    )

@@ -52,3 +52,24 @@ def mark_as_read(db: Session, notification_id: int):
     db.refresh(notification)
 
     return notification
+
+def delete_notification(db: Session, notification_id: int):
+
+    notification = (
+        db.query(Notification)
+        .filter(Notification.id == notification_id)
+        .first()
+    )
+
+    if notification is None:
+        raise IntelliForgeException(
+            "Notification not found",
+            404
+        )
+
+    db.delete(notification)
+    db.commit()
+
+    return {
+        "message": "Notification deleted successfully."
+    }

@@ -9,30 +9,40 @@ genai.configure(api_key=settings.GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-2.5-flash")
 
 
-
 def analyze_log(log):
     try:
-        prompt = f"""
-You are an expert SOC analyst.
 
-Analyze this security event.
+        prompt = f"""
+You are a SOC Security Analyst.
+
+Analyze this security event and return ONLY valid JSON.
+
+Rules:
+- summary: Maximum 20 words.
+- attack_type: Maximum 3 words.
+- recommendation: Maximum 10 words.
+- No markdown.
+- No headings.
+- No bullet points.
+- No explanations.
+- No code blocks.
+- Return ONLY valid JSON.
+
+Security Event:
 
 Source: {log.source}
 User: {log.username}
-IP: {log.ip_address}
+IP Address: {log.ip_address}
 Event: {log.event_type}
 Severity: {log.severity}
 
-Return ONLY valid JSON in this exact format:
+Return exactly:
 
 {{
-  "summary": "...",
-  "attack_type": "...",
-  "recommendation": "..."
+  "summary": "",
+  "attack_type": "",
+  "recommendation": ""
 }}
-
-Keep each field under 40 words.
-Do not include markdown or explanations.
 """
 
         print("Calling Gemini...")
@@ -42,31 +52,41 @@ Do not include markdown or explanations.
         print("Raw Response:", response)
 
         if hasattr(response, "text"):
+
             print("Response Text:", response.text)
 
+            text = response.text.strip()
+
+            # Remove markdown if Gemini adds it
+            text = text.replace("```json", "").replace("```", "").strip()
+
             try:
-                return json.loads(response.text)
+                return json.loads(text)
+
             except json.JSONDecodeError:
+
                 return {
-                    "summary": response.text,
+                    "summary": text[:100],
                     "attack_type": "Unknown",
-                    "recommendation": "No recommendation generated."
+                    "recommendation": "Review manually."
                 }
 
         return {
             "summary": "No AI response generated.",
             "attack_type": "Unknown",
-            "recommendation": "No recommendation available."
+            "recommendation": "No recommendation."
         }
 
     except Exception as e:
+
         print("Gemini ERROR:", repr(e))
-        
+
         return {
-            "summary": f"Gemini Error: {e}",
+            "summary": "AI analysis unavailable.",
             "attack_type": "Unknown",
-            "recommendation": "Check Gemini API configuration."
+            "recommendation": "Check Gemini configuration."
         }
+
 
 def generate_executive_summary(stats, incidents):
     try:
@@ -74,7 +94,7 @@ def generate_executive_summary(stats, incidents):
         prompt = f"""
 You are a SOC Manager.
 
-Generate a professional executive summary.
+Generate a concise executive summary.
 
 Statistics:
 
@@ -97,16 +117,14 @@ Recent Incidents:
 
         prompt += """
 
-Write a concise executive summary.
+Write a professional executive summary.
 
 Maximum 120 words.
 
 Mention:
-
-• Threat posture
-• Most common attack
-• Overall risk
-• Recommended action
+- Threat posture
+- Overall risk
+- Recommended action
 """
 
         response = model.generate_content(prompt)
@@ -115,3 +133,26 @@ Mention:
 
     except Exception:
         return "Executive summary unavailable."
+
+def ask_gemini(prompt: str):
+    try:
+        response = model.generate_content(prompt)
+
+        print("=" * 60)
+        print(response)
+        print("=" * 60)
+
+        if hasattr(response, "text"):
+            return response.text.strip()
+
+        return "No response generated."
+
+    except Exception as e:
+        import traceback
+
+        print("\n" + "=" * 60)
+        print("GEMINI ERROR")
+        traceback.print_exc()
+        print("=" * 60)
+
+        return f"ERROR: {e}"

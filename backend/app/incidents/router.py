@@ -15,6 +15,7 @@ from app.incidents.service import (
     get_incidents,
     resolve_incident,
     assign_incident,
+    get_incident_by_id,
 )
 
 router = APIRouter(
@@ -46,6 +47,15 @@ def list_incidents(
         severity
     )
 
+@router.get("/{incident_id}")
+def get_incident(
+    incident_id: int,
+    db: Session = Depends(get_db)
+):
+    return get_incident_by_id(
+        db,
+        incident_id
+    )
 
 @router.patch("/{incident_id}/resolve")
 def resolve(
