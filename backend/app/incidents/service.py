@@ -1,7 +1,9 @@
+from datetime import datetime
 from sqlalchemy.orm import Session
 
 from app.models.incident import Incident
 from app.incidents.schemas import IncidentCreate
+from app.notifications.service import create_notification
 
 
 def create_incident(db: Session, incident: IncidentCreate):
@@ -16,6 +18,14 @@ def create_incident(db: Session, incident: IncidentCreate):
     db.add(new_incident)
     db.commit()
     db.refresh(new_incident)
+
+    # Create an in-app notification
+    create_notification(
+        db=db,
+        title="🚨 Security Incident Detected",
+        message=f"{new_incident.title} from {new_incident.source_ip}",
+        severity=new_incident.severity
+    )
 
     return new_incident
 
@@ -56,10 +66,19 @@ def create_incident_from_log(db: Session, log):
     )
 
     db.add(incident)
+    db.commit()
+    db.refresh(incident)
+
+    # Create an in-app notification
+    create_notification(
+        db=db,
+        title="🚨 AI Security Alert",
+        message=f"{incident.title} from {incident.source_ip}",
+        severity=incident.severity
+    )
 
     return incident
 
-from datetime import datetime
 
 def resolve_incident(db: Session, incident_id: int):
 
@@ -69,7 +88,7 @@ def resolve_incident(db: Session, incident_id: int):
         .first()
     )
 
-    if not incident:
+    if incident is None:
         return None
 
     incident.status = "Resolved"
@@ -79,6 +98,7 @@ def resolve_incident(db: Session, incident_id: int):
     db.refresh(incident)
 
     return incident
+
 
 def assign_incident(
     db: Session,

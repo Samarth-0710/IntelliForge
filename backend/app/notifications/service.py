@@ -18,6 +18,7 @@ def create_notification(
 
     db.add(notification)
     db.commit()
+    db.refresh(notification)
 
     return notification
 
