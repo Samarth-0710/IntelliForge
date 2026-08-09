@@ -19,6 +19,7 @@ from app.core.exceptions import (
     intelliforge_exception_handler,
 )
 
+import app.models
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(

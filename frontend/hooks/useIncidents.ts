@@ -1,41 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import api from "@/lib/api";
+import { Incident } from "@/types/incident";
 
-export interface Incident {
-  id: number;
-  title: string;
-  description: string;
-  severity: string;
-  source_ip: string;
-  status: string;
-  created_at: string;
-}
+export type { Incident };
 
 export default function useIncidents() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  async function loadIncidents() {
+  const loadIncidents = useCallback(async () => {
     try {
+      setError(null);
       const res = await api.get("/incidents");
-
       setIncidents(res.data);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("Failed to load incidents:", err);
+      setError(err.message || "Failed to load incidents");
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     loadIncidents();
-  }, []);
+  }, [loadIncidents]);
 
   return {
     incidents,
     loading,
+    error,
     refresh: loadIncidents,
   };
 }

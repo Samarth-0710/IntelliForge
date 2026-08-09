@@ -34,7 +34,7 @@ def create(
 @router.get("/")
 def list_incidents(
     page: int = 1,
-    limit: int = 10,
+    limit: int = 100,
     status: str | None = None,
     severity: str | None = None,
     db: Session = Depends(get_db)

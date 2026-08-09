@@ -1,17 +1,12 @@
 from collections import Counter
-
 from sqlalchemy.orm import Session
 
 from app.models.log import Log
 from app.models.incident import Incident
-from app.ai.gemini_service import (
-    model,
-    ask_gemini,
-)
+from app.ai.gemini_service import ask_gemini
 
 
 def get_ai_dashboard(db: Session):
-
     logs = db.query(Log).all()
     incidents = db.query(Incident).all()
 
@@ -21,69 +16,45 @@ def get_ai_dashboard(db: Session):
     )
 
     # ----------------------------
-    # Incident Counts
+    # Incident Counts (Consistent with PostgreSQL Incidents table)
     # ----------------------------
-
     critical_incidents = len(
-        [
-            log
-            for log in logs
-            if log.severity.lower() == "critical"
-        ]
+        [inc for inc in incidents if (inc.severity or "").lower() == "critical"]
     )
 
     high_incidents = len(
-        [
-            log
-            for log in logs
-            if log.severity.lower() == "high"
-        ]
+        [inc for inc in incidents if (inc.severity or "").lower() == "high"]
     )
 
     medium_incidents = len(
-        [
-            log
-            for log in logs
-            if log.severity.lower() == "medium"
-        ]
+        [inc for inc in incidents if (inc.severity or "").lower() == "medium"]
     )
 
     low_incidents = len(
-        [
-            log
-            for log in logs
-            if log.severity.lower() == "low"
-        ]
+        [inc for inc in incidents if (inc.severity or "").lower() == "low"]
     )
 
     open_incidents = len(
-        [
-            incident
-            for incident in incidents
-            if incident.status.lower() != "resolved"
-        ]
+        [inc for inc in incidents if (inc.status or "").lower() == "open"]
     )
 
     # ----------------------------
     # Threat Level
     # ----------------------------
-
     if highest_risk >= 80:
         threat_level = "High"
-
     elif highest_risk >= 50:
         threat_level = "Medium"
-
     else:
         threat_level = "Low"
 
     # ----------------------------
     # Most Common Attack
     # ----------------------------
-
     attack_counter = Counter(
         log.event_type
         for log in logs
+        if log.event_type
     )
 
     top_attack = (
@@ -95,10 +66,10 @@ def get_ai_dashboard(db: Session):
     # ----------------------------
     # Most Suspicious IP
     # ----------------------------
-
     ip_counter = Counter(
         log.ip_address
         for log in logs
+        if log.ip_address
     )
 
     top_ip = (
@@ -110,10 +81,10 @@ def get_ai_dashboard(db: Session):
     # ----------------------------
     # Most Targeted User
     # ----------------------------
-
     user_counter = Counter(
         log.username
         for log in logs
+        if log.username
     )
 
     top_user = (
@@ -125,29 +96,16 @@ def get_ai_dashboard(db: Session):
     # ----------------------------
     # AI Recommendation
     # ----------------------------
-
     if threat_level == "High":
-
-        recommendation = (
-            "Investigate high-risk incidents and enable MFA."
-        )
-
+        recommendation = "Investigate high-risk incidents immediately and enforce multi-factor authentication."
     elif threat_level == "Medium":
-
-        recommendation = (
-            "Review suspicious activity and monitor users."
-        )
-
+        recommendation = "Review suspicious IP activities and monitor anomalous user account behaviors."
     else:
-
-        recommendation = (
-            "System operating normally."
-        )
+        recommendation = "System operating within normal baseline security thresholds."
 
     # ----------------------------
     # Recent AI Analysis
     # ----------------------------
-
     recent_analysis = [
         {
             "event": log.event_type,
@@ -166,24 +124,19 @@ def get_ai_dashboard(db: Session):
         "highest_risk": highest_risk,
         "total_logs": len(logs),
         "open_incidents": open_incidents,
-
         "critical_incidents": critical_incidents,
         "high_incidents": high_incidents,
         "medium_incidents": medium_incidents,
         "low_incidents": low_incidents,
-
         "top_attack": top_attack,
         "top_ip": top_ip,
         "top_user": top_user,
-
         "recommendation": recommendation,
-
         "recent_analysis": recent_analysis,
     }
 
 
 def ask_ai(message: str):
-
     prompt = f"""
 You are IntelliForge AI Security Copilot.
 
@@ -194,11 +147,9 @@ Keep answers below 120 words.
 Question:
 {message}
 """
-
-    response = model.generate_content(prompt)
-
+    answer = ask_gemini(prompt)
     return {
-        "answer": response.text
+        "answer": answer
     }
 
 
@@ -206,36 +157,62 @@ def ask_ai_with_context(
     db: Session,
     question: str,
 ):
-
     dashboard = get_ai_dashboard(db)
 
+    # Enriched live security context: Active/Open incidents
+    open_incidents = (
+        db.query(Incident)
+        .filter(Incident.status == "Open")
+        .order_by(Incident.created_at.desc())
+        .limit(10)
+        .all()
+    )
+    incidents_text = "\n".join([
+        f"- Incident #{inc.id}: {inc.title} | Severity: {inc.severity} | Status: {inc.status} | Source IP: {inc.source_ip} | Assigned To: {inc.assigned_to or 'Unassigned'}"
+        for inc in open_incidents
+    ]) or "No active open incidents."
+
+    # Enriched live security context: High-risk logs
+    high_risk_logs = (
+        db.query(Log)
+        .filter(Log.risk_score >= 50)
+        .order_by(Log.timestamp.desc())
+        .limit(8)
+        .all()
+    )
+    logs_text = "\n".join([
+        f"- Log #{l.id}: {l.event_type} | Severity: {l.severity} | Risk: {l.risk_score} | User: {l.username or 'N/A'} | IP: {l.ip_address or 'N/A'} | AI Summary: {l.ai_summary or 'N/A'}"
+        for l in high_risk_logs
+    ]) or "No high-risk logs recorded."
+
     prompt = f"""
-You are IntelliForge AI Security Assistant.
+You are IntelliForge AI Security Copilot, an expert Level-3 SOC Security Analyst.
 
-Current Security Dashboard
+Current Security Posture & Metrics:
+- Threat Level: {dashboard['threat_level']}
+- Highest Risk Score: {dashboard['highest_risk']}
+- Active Open Incidents: {dashboard['open_incidents']}
+- Total Logs Ingested: {dashboard['total_logs']}
+- Critical Severity Incidents: {dashboard['critical_incidents']}
+- High Severity Incidents: {dashboard['high_incidents']}
+- Most Frequent Attack Vector: {dashboard['top_attack']}
+- Most Suspicious Source IP: {dashboard['top_ip']}
+- Most Targeted User: {dashboard['top_user']}
+- AI System Recommendation: {dashboard['recommendation']}
 
-Threat Level: {dashboard['threat_level']}
-Highest Risk Score: {dashboard['highest_risk']}
-Open Incidents: {dashboard['open_incidents']}
-Total Logs: {dashboard['total_logs']}
+Active Unresolved Incidents:
+{incidents_text}
 
-Top Attack:
-{dashboard['top_attack']}
-
-Most Suspicious IP:
-{dashboard['top_ip']}
-
-Most Targeted User:
-{dashboard['top_user']}
-
-AI Recommendation:
-{dashboard['recommendation']}
+Recent High-Risk Security Logs:
+{logs_text}
 
 User Question:
 {question}
 
-Answer ONLY using the dashboard context.
-Explain your reasoning briefly.
+Instructions:
+1. Provide a concise, professional SOC analyst response (under 140 words).
+2. Directly reference specific incident IDs, threat vectors, IPs, assignees, or logs where relevant.
+3. Recommend actionable remediation or containment steps when discussing threats.
 """
 
     return ask_gemini(prompt)
@@ -245,7 +222,6 @@ def investigate_incident_ai(
     db: Session,
     incident_id: int,
 ):
-
     incident = (
         db.query(Incident)
         .filter(Incident.id == incident_id)
@@ -262,20 +238,13 @@ You are IntelliForge AI, an expert SOC Level-3 Security Analyst.
 
 Analyze this security incident.
 
-Title:
-{incident.title}
-
-Description:
-{incident.description}
-
-Severity:
-{incident.severity}
-
-Status:
-{incident.status}
-
-Source IP:
-{incident.source_ip}
+Incident ID: #{incident.id}
+Title: {incident.title}
+Description: {incident.description}
+Severity: {incident.severity}
+Status: {incident.status}
+Source IP: {incident.source_ip}
+Assigned To: {incident.assigned_to or 'Unassigned'}
 
 STRICT RULES:
 - Maximum 150 words.
@@ -306,11 +275,11 @@ Recommendations:
         "analysis": analysis
     }
 
+
 def generate_incident_summary(
     db: Session,
     incident_id: int,
 ):
-
     incident = (
         db.query(Incident)
         .filter(Incident.id == incident_id)
@@ -327,14 +296,10 @@ You are IntelliForge AI.
 
 Summarize this security incident.
 
-Title:
-{incident.title}
-
-Description:
-{incident.description}
-
-Severity:
-{incident.severity}
+Incident ID: #{incident.id}
+Title: {incident.title}
+Description: {incident.description}
+Severity: {incident.severity}
 
 Rules:
 - Maximum 20 words.

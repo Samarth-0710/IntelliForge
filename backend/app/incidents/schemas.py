@@ -17,9 +17,12 @@ class IncidentResponse(BaseModel):
     source_ip: str
     status: str
     created_at: datetime
+    resolved_at: datetime | None = None
+    assigned_to: str | None = None
 
     class Config:
         from_attributes = True
+
 
 class IncidentAssign(BaseModel):
     assigned_to: str

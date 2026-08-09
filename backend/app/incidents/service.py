@@ -1,29 +1,30 @@
 from datetime import datetime
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
 
 from app.models.incident import Incident
 from app.incidents.schemas import IncidentCreate
 from app.notifications.service import create_notification
-from fastapi import HTTPException
+
 
 def create_incident(db: Session, incident: IncidentCreate):
-
     new_incident = Incident(
         title=incident.title,
         description=incident.description,
         severity=incident.severity,
-        source_ip=incident.source_ip
+        source_ip=incident.source_ip,
+        status="Open"
     )
 
     db.add(new_incident)
     db.commit()
     db.refresh(new_incident)
 
-    # Create an in-app notification
+    # Create an in-app notification with incident reference
     create_notification(
         db=db,
         title="🚨 Security Incident Detected",
-        message=f"{new_incident.title} from {new_incident.source_ip}",
+        message=f"{new_incident.title} from {new_incident.source_ip} (Incident #{new_incident.id})",
         severity=new_incident.severity
     )
 
@@ -33,12 +34,11 @@ def create_incident(db: Session, incident: IncidentCreate):
 def get_incidents(
     db: Session,
     page: int = 1,
-    limit: int = 10,
+    limit: int = 100,
     status: str = None,
     severity: str = None
 ):
-
-    query = db.query(Incident)
+    query = db.query(Incident).order_by(Incident.created_at.desc())
 
     if status:
         query = query.filter(
@@ -50,15 +50,22 @@ def get_incidents(
             Incident.severity == severity.strip()
         )
 
-    query = query.offset((page - 1) * limit).limit(limit)
+    if limit and limit > 0:
+        query = query.offset((page - 1) * limit).limit(limit)
 
     return query.all()
 
 
 def create_incident_from_log(db: Session, log):
+    event_type = log.event_type or "Security Event"
+    # Avoid duplicate "Detected Detected"
+    if event_type.lower().endswith("detected"):
+        incident_title = event_type
+    else:
+        incident_title = f"{event_type} Detected"
 
     incident = Incident(
-        title=f"{log.event_type} Detected",
+        title=incident_title,
         description=f"AI detected a high-risk event from {log.source}",
         severity=log.severity,
         source_ip=log.ip_address,
@@ -69,11 +76,11 @@ def create_incident_from_log(db: Session, log):
     db.commit()
     db.refresh(incident)
 
-    # Create an in-app notification
+    # Create an in-app notification with incident reference
     create_notification(
         db=db,
         title="🚨 AI Security Alert",
-        message=f"{incident.title} from {incident.source_ip}",
+        message=f"{incident.title} from {incident.source_ip} (Incident #{incident.id})",
         severity=incident.severity
     )
 
@@ -81,7 +88,6 @@ def create_incident_from_log(db: Session, log):
 
 
 def resolve_incident(db: Session, incident_id: int):
-
     incident = (
         db.query(Incident)
         .filter(Incident.id == incident_id)
@@ -105,7 +111,6 @@ def assign_incident(
     incident_id: int,
     assigned_to: str
 ):
-
     incident = (
         db.query(Incident)
         .filter(Incident.id == incident_id)
@@ -115,12 +120,13 @@ def assign_incident(
     if incident is None:
         return None
 
-    incident.assigned_to = assigned_to
+    incident.assigned_to = assigned_to.strip() if assigned_to else None
 
     db.commit()
     db.refresh(incident)
 
     return incident
+
 
 def get_incident_by_id(
     db: Session,

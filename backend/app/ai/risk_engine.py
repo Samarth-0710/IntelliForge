@@ -1,22 +1,20 @@
 def calculate_risk(log):
-
-    print("Risk Engine Called")
-
     score = 0
+    event_type = (log.event_type or "").lower()
 
-    if "failed" in log.event_type.lower():
+    if "failed" in event_type:
         score += 40
 
-    if "brute" in log.event_type.lower():
+    if "brute" in event_type:
         score += 60
 
-    if "malware" in log.event_type.lower():
+    if "malware" in event_type:
         score += 90
 
-    if "ransomware" in log.event_type.lower():
+    if "ransomware" in event_type:
         score += 100
 
-    severity = log.severity.lower()
+    severity = (log.severity or "").lower()
 
     if severity == "low":
         score += 10
@@ -26,7 +24,5 @@ def calculate_risk(log):
         score += 50
     elif severity == "critical":
         score += 80
-
-    print("Final Score:", score)
 
     return min(score, 100)
