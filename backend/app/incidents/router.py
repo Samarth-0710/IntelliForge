@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.auth.dependencies import get_current_user
-from app.models.user import User
 
 from app.incidents.schemas import (
     IncidentCreate,
@@ -18,18 +17,24 @@ from app.incidents.service import (
     get_incident_by_id,
 )
 
+
 router = APIRouter(
     prefix="/incidents",
     tags=["Incidents"],
     dependencies=[Depends(get_current_user)]
 )
 
+
 @router.post("/")
 def create(
     incident: IncidentCreate,
     db: Session = Depends(get_db)
 ):
-    return create_incident(db, incident)
+    return create_incident(
+        db,
+        incident
+    )
+
 
 @router.get("/")
 def list_incidents(
@@ -47,6 +52,7 @@ def list_incidents(
         severity
     )
 
+
 @router.get("/{incident_id}")
 def get_incident(
     incident_id: int,
@@ -57,12 +63,16 @@ def get_incident(
         incident_id
     )
 
+
 @router.patch("/{incident_id}/resolve")
 def resolve(
     incident_id: int,
     db: Session = Depends(get_db)
 ):
-    incident = resolve_incident(db, incident_id)
+    incident = resolve_incident(
+        db,
+        incident_id
+    )
 
     if incident is None:
         raise HTTPException(
@@ -71,6 +81,7 @@ def resolve(
         )
 
     return incident
+
 
 @router.patch("/{incident_id}/assign")
 def assign(

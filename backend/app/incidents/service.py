@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 
@@ -14,9 +15,14 @@ from app.notifications.email_service import send_email_alert
 
 def send_incident_email(incident):
     try:
-        send_email_alert(incident)
+        send_email_alert(
+            incident=incident,
+            notification_type="created"
+        )
+
         print(
-            f"[EMAIL] Incident alert sent for Incident #{incident.id}"
+            f"[EMAIL] Incident alert sent for "
+            f"Incident #{incident.id}"
         )
 
     except Exception as e:
@@ -33,10 +39,14 @@ def send_incident_email(incident):
 
 def send_incident_resolved_email(incident):
     try:
-        send_email_alert(incident)
+        send_email_alert(
+            incident=incident,
+            notification_type="resolved"
+        )
+
         print(
-            f"[EMAIL] Resolution alert sent "
-            f"for Incident #{incident.id}"
+            f"[EMAIL] Resolution alert sent for "
+            f"Incident #{incident.id}"
         )
 
     except Exception as e:
@@ -79,7 +89,9 @@ def create_incident(
         severity=new_incident.severity
     )
 
-    # Send email alert
+    # Send email to ALL team members
+    # This happens for EVERY severity:
+    # Low / Medium / High / Critical
     send_incident_email(new_incident)
 
     return new_incident
@@ -164,7 +176,8 @@ def create_incident_from_log(
         severity=incident.severity
     )
 
-    # Send email alert
+    # Send email to ALL team members
+    # No severity restriction
     send_incident_email(incident)
 
     return incident
@@ -205,7 +218,7 @@ def resolve_incident(
         severity=incident.severity
     )
 
-    # Send resolution email
+    # Send resolution email to ALL team members
     send_incident_resolved_email(incident)
 
     return incident
