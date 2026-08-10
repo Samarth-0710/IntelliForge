@@ -9,18 +9,32 @@ load_dotenv()
 def send_email_alert(incident):
     sender_email = os.getenv("ALERT_EMAIL")
     app_password = os.getenv("ALERT_EMAIL_PASSWORD")
-    receiver_email = os.getenv("ALERT_RECEIVER_EMAIL")
+    receivers = os.getenv("ALERT_RECEIVER_EMAIL", "")
 
     if not sender_email:
-        raise Exception("ALERT_EMAIL is not configured")
+        raise RuntimeError("ALERT_EMAIL is not configured")
 
     if not app_password:
-        raise Exception("ALERT_EMAIL_PASSWORD is not configured")
+        raise RuntimeError("ALERT_EMAIL_PASSWORD is not configured")
 
-    if not receiver_email:
-        raise Exception("ALERT_RECEIVER_EMAIL is not configured")
+    if not receivers:
+        raise RuntimeError("ALERT_RECEIVER_EMAIL is not configured")
 
-    subject = f"🚨 IntelliForge Security Alert - {incident.severity}"
+    recipient_list = [
+        email.strip()
+        for email in receivers.split(",")
+        if email.strip()
+    ]
+
+    if not recipient_list:
+        raise RuntimeError(
+            "ALERT_RECEIVER_EMAIL contains no valid email addresses"
+        )
+
+    subject = (
+        f"🚨 IntelliForge Security Alert - "
+        f"{incident.severity}"
+    )
 
     body = (
         "INTELLIFORGE SECURITY ALERT\n\n"
@@ -36,7 +50,7 @@ def send_email_alert(incident):
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = sender_email
-    msg["To"] = receiver_email
+    msg["To"] = ", ".join(recipient_list)
     msg.set_content(body)
 
     with smtplib.SMTP("smtp.gmail.com", 587) as server:
@@ -44,4 +58,5 @@ def send_email_alert(incident):
         server.login(sender_email, app_password)
         server.send_message(msg)
 
-    print(f"[EMAIL] Alert sent to {receiver_email}")
+    for email in recipient_list:
+        print(f"[EMAIL] Alert sent to {email}")
