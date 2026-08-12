@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 from app.database.session import get_db
 from app.auth.dependencies import get_current_user
@@ -15,7 +16,17 @@ from app.incidents.service import (
     resolve_incident,
     assign_incident,
     get_incident_by_id,
+    get_incident_timeline,
+    get_incident_security_events,
+    get_incident_threat_intelligence,
+    get_incident_attack_techniques,
+    escalate_incident,
 )
+from app.ai.soc_analyst import generate_soc_analyst_investigation
+
+
+class EscalateRequest(BaseModel):
+    reason: str = "Escalated by SOC Analyst"
 
 
 router = APIRouter(
@@ -62,6 +73,64 @@ def get_incident(
         db,
         incident_id
     )
+
+
+@router.get("/{incident_id}/timeline")
+def get_timeline(
+    incident_id: int,
+    db: Session = Depends(get_db)
+):
+    return get_incident_timeline(db, incident_id)
+
+
+@router.get("/{incident_id}/events")
+def get_events(
+    incident_id: int,
+    db: Session = Depends(get_db)
+):
+    return get_incident_security_events(db, incident_id)
+
+
+@router.get("/{incident_id}/intelligence")
+def get_intelligence(
+    incident_id: int,
+    db: Session = Depends(get_db)
+):
+    return get_incident_threat_intelligence(db, incident_id)
+
+
+@router.get("/{incident_id}/attack-techniques")
+def get_attack_techniques(
+    incident_id: int,
+    db: Session = Depends(get_db)
+):
+    return get_incident_attack_techniques(db, incident_id)
+
+
+@router.get("/{incident_id}/ai-analysis")
+def get_ai_analysis(
+    incident_id: int,
+    db: Session = Depends(get_db)
+):
+    return generate_soc_analyst_investigation(db, incident_id)
+
+
+@router.post("/{incident_id}/investigate")
+def trigger_investigate(
+    incident_id: int,
+    db: Session = Depends(get_db)
+):
+    return generate_soc_analyst_investigation(db, incident_id)
+
+
+@router.post("/{incident_id}/escalate")
+def escalate(
+    incident_id: int,
+    data: EscalateRequest = None,
+    db: Session = Depends(get_db)
+):
+    reason = data.reason if data else "Escalated by SOC Analyst"
+    return escalate_incident(db, incident_id, reason=reason)
 
 
 @router.patch("/{incident_id}/resolve")

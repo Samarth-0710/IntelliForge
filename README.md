@@ -1,256 +1,190 @@
-# 🛡️ IntelliForge
+# 🛡️ IntelliForge 2.0 — AI-Powered Autonomous SOC Platform
 
-An AI-powered Security Operations Center (SOC) platform for detecting, analyzing, and managing cybersecurity incidents using FastAPI, PostgreSQL, JWT Authentication, and Google Gemini AI.
+IntelliForge 2.0 is an enterprise-grade, autonomous Security Operations Center (SOC) platform engineered to detect, correlate, investigate, and remediate cybersecurity threats across distributed endpoints in real-time.
 
----
-
-## 📌 Overview
-
-IntelliForge helps security teams monitor system events, identify threats, prioritize incidents, generate AI-powered summaries, and export professional security reports.
-
-The platform combines traditional SOC workflows with AI assistance to reduce response time and improve incident management.
+Built with **FastAPI**, **Next.js 16 / React 19**, **PostgreSQL**, **Google Gemini 2.5 Flash AI**, **Tavily Threat Intelligence**, and **Safe SOAR Response Orchestration**.
 
 ---
 
-## ✨ Features
-
-### 🔐 Authentication
-- JWT Authentication
-- Secure password hashing
-- Admin login
-- Protected API endpoints
-
-### 📊 Dashboard
-- Total Logs
-- Total Incidents
-- Critical Incidents
-- Open Incidents
-- Resolved Incidents
-
-### 📁 Log Management
-- View security logs
-- Search logs
-- Filter logs
-- AI risk scoring
-
-### 🚨 Incident Management
-- Create incidents
-- View incidents
-- Filter by severity
-- Filter by status
-- Assign incidents
-- Resolve incidents
-
-### 🤖 AI Integration
-- Google Gemini integration
-- Executive report summaries
-- AI assistant
-- Risk analysis
-
-### 📄 Reports
-- PDF report generation
-- CSV report export
-- AI-generated executive summaries
-
-### 🔔 Notifications
-- Notification APIs
-- Alert management
-
-### 📈 Analytics
-- Incident statistics
-- Security analytics
-- Dashboard metrics
-
----
-
-# 🏗 Project Structure
+## 🌟 Key Architecture & Capabilities
 
 ```
-IntelliForge/
-│
-├── backend/
-│   ├── app/
-│   │   ├── ai/
-│   │   ├── analytics/
-│   │   ├── assistant/
-│   │   ├── auth/
-│   │   ├── dashboard/
-│   │   ├── database/
-│   │   ├── incidents/
-│   │   ├── logs/
-│   │   ├── notifications/
-│   │   ├── reports/
-│   │   ├── models/
-│   │   └── main.py
-│   │
-│   ├── uploads/
-│   ├── reports_output/
-│   └── requirements.txt
-│
-├── frontend/
-├── database/
-├── docker/
-└── README.md
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       INTELLIFORGE 2.0 SOC PIPELINE                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  [Windows Event Collector] ──▶ [Normalizer] ──▶ [Multi-Factor Risk Engine]  │
+│  (4625, 4624, 4688, 1102)        (Syslog)              (0 - 100 Score)      │
+│                                                            │                │
+│                                                            ▼                │
+│  [Tavily Threat Intel] ◀── [Correlation Engine] ──▶ [MITRE ATT&CK Mapping]  │
+│  (Web IOC Citations)     (Multi-Event Burst UUID)   (T1110, T1078, T1059)   │
+│                                    │                                        │
+│                                    ▼                                        │
+│  [L3 AI SOC Analyst] ──▶ [Safe SOAR Response] ──▶ [Multi-Channel Alerts]    │
+│  (Google Gemini + Lyzr)  (Human-in-the-Loop Gate)   (SMS & Email Dispatch)  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-# 🛠 Tech Stack
+## ✨ Feature Modules
 
-## Backend
+### 1. Multi-Endpoint Fleet Monitoring
+- Real-time fleet status (`Mohith-PC`, `Kumuda-PC`, `Samarth-MacBook`, etc.)
+- Tailscale VPN (`100.x.x.x`) & Local IP tracking
+- Periodic heartbeat telemetry and risk level monitoring
 
-- FastAPI
-- SQLAlchemy
-- PostgreSQL
-- JWT Authentication
-- Passlib
-- Pydantic
+### 2. Real Windows Security Event Pipeline
+- Real Windows Event log collection:
+  - **Event 4625**: Failed Logon (Brute Force / Credential Access)
+  - **Event 4624**: Successful Logon (Initial Access / Account Validation)
+  - **Event 4688**: Process Creation (Command & Scripting Interpreter)
+  - **Event 4720**: User Account Created (Persistence)
+  - **Event 4728**: Security-Enabled Group Member Added (Privilege Escalation)
+  - **Event 4740**: User Account Locked Out (Credential Access)
+  - **Event 1102**: Audit Log Cleared (Defense Evasion)
+- State persistence tracking (`.collector_state.json`) to prevent duplicate ingestion
 
-## AI
+### 3. Multi-Factor Risk Engine (0-100 Score)
+- Calculates risk using event ID weights, burst frequency, privileged account multipliers, and severity multipliers
+- Classified into **Critical (75-100)**, **High (50-74)**, **Medium (25-49)**, and **Low (0-24)**
 
-- Google Gemini API
+### 4. Correlation Engine
+- Automatically correlates multi-event bursts into unified security incidents
+- Assigns unique `CORR-XXXXXXXX` correlation identifiers
+- Calculates duration, affected user set, and affected endpoint set
 
-## Reports
+### 5. MITRE ATT&CK Framework Mapping
+- Automated evidence-based mapping:
+  - **T1110**: Brute Force
+  - **T1078**: Valid Accounts
+  - **T1059**: Command and Scripting Interpreter
+  - **T1136**: Create Account
+  - **T1098**: Account Manipulation
+  - **T1070.001**: Clear Windows Event Logs
+  - **T1486**: Data Encrypted for Impact
 
-- ReportLab
-- CSV
+### 6. Tavily Real-Time Threat Intelligence
+- External IOC reputation scanner with 6-hour caching
+- Detects known malicious IPs, suspicious networks, and private/Tailscale addresses
+- Extracts verifiable web citations and threat summaries
 
-## Database
+### 7. AI SOC Analyst & Lyzr Security Agent
+- Autonomous Level-3 AI investigation report generation (Google Gemini 2.5 Flash)
+- Evidence extraction, confidence scoring, and step-by-step remediation plans
+- Lyzr multi-tool security execution agent
 
-- PostgreSQL
+### 8. Safe SOAR & n8n Automation Engine
+- Automated webhook triggers for high/critical security incidents
+- **Human-in-the-Loop** approval gate for destructive containment actions:
+  - Block Malicious IP
+  - Isolate Compromised Host
+  - Revoke Active Session Tokens
+  - Disable Compromised User Account
+
+### 9. Multi-Channel Alerting
+- Rich HTML SOC alert emails (Incident #, Severity, Risk, Endpoint, Timeline)
+- SMS Gateway dispatch fallback
+
+### 10. Centralized Audit Trail
+- Tamper-evident record of all system events, AI investigations, analyst logins, and SOAR executions
 
 ---
 
-# 🚀 Getting Started
+## 🚀 Quickstart Guide
 
-## Clone Repository
-
-```bash
-git clone https://github.com/Samarth-0710/IntelliForge.git
-cd IntelliForge
-```
+### Prerequisites
+- Python 3.10+
+- Node.js 18+
+- PostgreSQL or SQLite (built-in fallback)
 
 ---
 
-## Backend Setup
+### Backend Setup
 
 ```bash
 cd backend
 
+# Create virtual environment
 python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-source venv/bin/activate
-```
-
-Windows
-
-```bash
-venv\Scripts\activate
-```
-
-Install dependencies
-
-```bash
+# Install dependencies
 pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+
+# Run FastAPI backend server
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
----
-
-## Configure Environment
-
-Create a `.env` file inside `backend/`
-
-```env
-DATABASE_URL=postgresql://username:password@localhost/intelliforge
-
-SECRET_KEY=your_secret_key
-
-GEMINI_API_KEY=your_gemini_api_key
-```
-
----
-
-## Run Server
-
-```bash
-python -m uvicorn app.main:app --reload
-```
-
-Open
-
+FastAPI Swagger API Documentation:
 ```
 http://127.0.0.1:8000/docs
 ```
 
 ---
 
-# 📚 API Modules
+### Frontend Setup
 
-| Module | Description |
-|---------|-------------|
-| Authentication | Login & JWT |
-| Dashboard | Dashboard statistics |
-| Logs | Log management |
-| Incidents | Incident management |
-| Reports | PDF & CSV generation |
-| Notifications | Security alerts |
-| Analytics | Dashboard analytics |
-| AI Assistant | Gemini-powered assistant |
+```bash
+cd frontend
 
----
+# Install Node dependencies
+npm install
 
-# 📄 Reports
+# Start Next.js development server
+npm run dev
+```
 
-The platform generates
-
-- Security Report (PDF)
-- Incident Report (CSV)
-- AI Executive Summary
+Open SOC Command Center:
+```
+http://localhost:3000
+```
 
 ---
 
-# 🔒 Security
+### Running Endpoint Collectors & Attack Demos
 
-- Password hashing
-- JWT Authentication
-- Protected routes
-- Role-based access support
-- Secure API endpoints
+```bash
+# 1. Start Cross-Platform Endpoint Collector
+python scripts/endpoint_collector.py --hostname Mohith-PC --os "Windows 11"
 
----
+# 2. Trigger Real Windows Event 4625 Demonstration Attack
+python scripts/endpoint_collector.py --demo-4625 --target Mohith-PC
 
-# 📸 Screenshots
+# 3. Trigger Real Windows Event 1102 (Log Tampering) Demonstration
+python scripts/endpoint_collector.py --demo-1102 --target Mohith-PC
 
-Frontend screenshots will be added after UI development.
-
----
-
-# 🚧 Roadmap
-
-- [x] FastAPI Backend
-- [x] PostgreSQL Integration
-- [x] JWT Authentication
-- [x] Dashboard APIs
-- [x] Incident Management
-- [x] Log Management
-- [x] AI Integration
-- [x] PDF Reports
-- [x] CSV Reports
-- [ ] React/Next.js Frontend
-- [ ] Docker Deployment
-- [ ] CI/CD Pipeline
+# 4. Start Windows Security Event Log Watcher
+python scripts/windows_event_collector.py --server http://127.0.0.1:8000
+```
 
 ---
 
-# 👨‍💻 Author
+## 🧪 Automated Test Suite
 
-**Samarth**
+Run the full end-to-end IntelliForge 2.0 test suite:
 
-GitHub:
-https://github.com/Samarth-0710
+```bash
+cd backend
+python -m unittest tests/test_intelliforge_v2.py
+```
 
 ---
 
-# 📜 License
+## ☁️ Deployment (Render Blueprint)
 
+IntelliForge 2.0 includes a production-ready `render.yaml` blueprint:
+
+1. Push your repository to GitHub.
+2. Link your repository in [Render Dashboard](https://dashboard.render.com/).
+3. Render automatically provisions the PostgreSQL database, FastAPI Python backend, and Next.js frontend.
+
+---
+
+## 📄 License
 This project is licensed under the MIT License.

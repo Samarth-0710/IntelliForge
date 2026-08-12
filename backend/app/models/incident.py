@@ -24,3 +24,9 @@ class Incident(Base):
     resolved_at = Column(DateTime, nullable=True)
 
     assigned_to = Column(String(100), nullable=True)
+
+    # IntelliForge 2.0 Enhanced Fields (Optional / Backward Compatible)
+    risk_score = Column(Integer, default=0)
+    confidence = Column(Integer, default=85)
+    endpoint_id = Column(String(100), nullable=True)
+    correlation_id = Column(String(100), nullable=True)

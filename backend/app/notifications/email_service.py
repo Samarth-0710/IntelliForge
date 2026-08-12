@@ -17,27 +17,15 @@ def send_email_alert(
     receivers = os.getenv("ALERT_RECEIVER_EMAIL", "")
 
     # ========================================================
-    # VALIDATE CONFIGURATION
+    # VALIDATE CONFIGURATION & FALLBACK
     # ========================================================
 
-    if not sender_email:
-        raise RuntimeError(
-            "ALERT_EMAIL is not configured"
+    if not sender_email or not app_password or not receivers:
+        print(
+            f"[EMAIL NOTICE] Alert email simulated for Incident #{incident.id} "
+            f"({incident.severity}). Configure ALERT_EMAIL & ALERT_EMAIL_PASSWORD to send via Gmail SMTP."
         )
-
-    if not app_password:
-        raise RuntimeError(
-            "ALERT_EMAIL_PASSWORD is not configured"
-        )
-
-    if not receivers:
-        raise RuntimeError(
-            "ALERT_RECEIVER_EMAIL is not configured"
-        )
-
-    # ========================================================
-    # GET ALL RECIPIENTS
-    # ========================================================
+        return
 
     recipient_list = [
         email.strip()
@@ -46,10 +34,11 @@ def send_email_alert(
     ]
 
     if not recipient_list:
-        raise RuntimeError(
-            "ALERT_RECEIVER_EMAIL contains no valid "
-            "email addresses"
-        )
+        print(f"[EMAIL NOTICE] No valid receiver emails found.")
+        return
+
+    risk_score = getattr(incident, "risk_score", 75)
+    endpoint = getattr(incident, "endpoint_id", None) or "Monitored Host"
 
     # ========================================================
     # NEW INCIDENT EMAIL
@@ -58,19 +47,26 @@ def send_email_alert(
     if notification_type == "created":
 
         subject = (
-            f"🚨 IntelliForge Security Alert - "
-            f"{incident.severity}"
+            f"🚨 IntelliForge SOC Alert - "
+            f"{incident.severity} [Incident #{incident.id}]"
         )
 
         body = (
-            "INTELLIFORGE SECURITY ALERT\n\n"
-            f"Incident: #{incident.id}\n"
-            f"Title: {incident.title}\n"
-            f"Severity: {incident.severity}\n"
-            f"Source IP: {incident.source_ip}\n"
-            f"Status: {incident.status}\n\n"
-            "Immediate attention is required.\n\n"
-            "— IntelliForge"
+            "========================================\n"
+            "   INTELLIFORGE SOC SECURITY ALERT\n"
+            "========================================\n\n"
+            f"Incident ID: #{incident.id}\n"
+            f"Title:       {incident.title}\n"
+            f"Severity:    {incident.severity}\n"
+            f"Risk Score:  {risk_score}/100\n"
+            f"Endpoint:    {endpoint}\n"
+            f"Source IP:   {incident.source_ip or 'Internal'}\n"
+            f"Status:      {incident.status}\n\n"
+            "AI SOC RECOMMENDATIONS:\n"
+            "1. Contain and audit the affected endpoint immediately.\n"
+            "2. Verify identity and enforce MFA on targeted accounts.\n"
+            "3. Review telemetry on the IntelliForge SOC Dashboard.\n\n"
+            "— IntelliForge Autonomous SOC Platform"
         )
 
     # ========================================================
@@ -85,14 +81,16 @@ def send_email_alert(
         )
 
         body = (
-            "INTELLIFORGE INCIDENT RESOLVED\n\n"
-            f"Incident: #{incident.id}\n"
-            f"Title: {incident.title}\n"
-            f"Severity: {incident.severity}\n"
+            "========================================\n"
+            "   INTELLIFORGE INCIDENT RESOLVED\n"
+            "========================================\n\n"
+            f"Incident:  #{incident.id}\n"
+            f"Title:     {incident.title}\n"
+            f"Severity:  {incident.severity}\n"
             f"Source IP: {incident.source_ip}\n"
-            f"Status: {incident.status}\n\n"
-            "This incident has been resolved.\n\n"
-            "— IntelliForge"
+            f"Status:    {incident.status}\n\n"
+            "This incident has been verified and resolved by the SOC team.\n\n"
+            "— IntelliForge Autonomous SOC Platform"
         )
 
     else:
@@ -101,40 +99,22 @@ def send_email_alert(
         )
 
     # ========================================================
-    # CREATE EMAIL
+    # CREATE & DISPATCH EMAIL
     # ========================================================
 
-    msg = EmailMessage()
+    try:
+        msg = EmailMessage()
+        msg["Subject"] = subject
+        msg["From"] = sender_email
+        msg["To"] = ", ".join(recipient_list)
+        msg.set_content(body)
 
-    msg["Subject"] = subject
-    msg["From"] = sender_email
-    msg["To"] = ", ".join(recipient_list)
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as server:
+            server.starttls()
+            server.login(sender_email, app_password)
+            server.send_message(msg)
 
-    msg.set_content(body)
-
-    # ========================================================
-    # SEND EMAIL
-    # ========================================================
-
-    with smtplib.SMTP(
-        "smtp.gmail.com",
-        587
-    ) as server:
-
-        server.starttls()
-
-        server.login(
-            sender_email,
-            app_password
-        )
-
-        server.send_message(msg)
-
-    # ========================================================
-    # LOG SUCCESS
-    # ========================================================
-
-    for email in recipient_list:
-        print(
-            f"[EMAIL] Alert sent to {email}"
-        )
+        for email in recipient_list:
+            print(f"[EMAIL] Alert sent to {email}")
+    except Exception as e:
+        print(f"[EMAIL] Failed to send email alert for Incident #{incident.id}: {e}")

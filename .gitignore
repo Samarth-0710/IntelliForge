@@ -2,11 +2,18 @@
 # Python Backend
 # -------------------------
 backend/venv/
-backend/**/__pycache__/
-backend/**/*.pyc
+venv/
+**/__pycache__/
+**/*.pyc
 backend/.env
-backend/reports_output/
-backend/uploads/
+backend/.env.*
+backend/reports_output/*
+!backend/reports_output/.gitkeep
+backend/uploads/*
+!backend/uploads/.gitkeep
+*.db
+*.sqlite
+*.sqlite3
 
 # -------------------------
 # Frontend (Next.js)
@@ -14,10 +21,16 @@ backend/uploads/
 frontend/node_modules/
 frontend/.next/
 frontend/.env
+frontend/.env.*
+frontend/out/
 
 # -------------------------
-# General
+# General & Secrets
 # -------------------------
 .DS_Store
 .vscode/
+.idea/
 .env
+.env.*
+!.env.example
+*.log

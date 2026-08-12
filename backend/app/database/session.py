@@ -3,9 +3,20 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 
+db_url = settings.DATABASE_URL or "sqlite:///./intelliforge.db"
+# Render provides postgres://, SQLAlchemy expects postgresql://
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+connect_args = {}
+if db_url.startswith("sqlite"):
+    connect_args["check_same_thread"] = False
+
 engine = create_engine(
-    settings.DATABASE_URL,
-    echo=True,          # Shows SQL queries in terminal (great for development)
+    db_url,
+    connect_args=connect_args,
+    echo=False,
+    pool_pre_ping=True if not db_url.startswith("sqlite") else False,
 )
 
 SessionLocal = sessionmaker(

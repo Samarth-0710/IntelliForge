@@ -9,6 +9,8 @@ from app.ai.service import (
     investigate_incident_ai,
     generate_incident_summary,
 )
+from app.ai.soc_analyst import generate_soc_analyst_investigation
+from app.ai.lyzr_service import run_lyzr_investigation_agent
 
 router = APIRouter(
     prefix="/ai",
@@ -41,6 +43,7 @@ def chat_with_ai(
         "answer": answer
     }
 
+
 @router.get("/investigate/{incident_id}")
 def investigate_incident(
     incident_id: int,
@@ -51,12 +54,35 @@ def investigate_incident(
         incident_id,
     )
 
+
 @router.get("/summary/{incident_id}")
 def incident_summary(
     incident_id: int,
     db: Session = Depends(get_db),
 ):
     return generate_incident_summary(
+        db,
+        incident_id,
+    )
+
+
+@router.get("/soc-analyst/{incident_id}")
+def get_soc_analyst_report(
+    incident_id: int,
+    db: Session = Depends(get_db),
+):
+    return generate_soc_analyst_investigation(
+        db,
+        incident_id,
+    )
+
+
+@router.post("/lyzr-investigate/{incident_id}")
+def lyzr_investigate(
+    incident_id: int,
+    db: Session = Depends(get_db),
+):
+    return run_lyzr_investigation_agent(
         db,
         incident_id,
     )
